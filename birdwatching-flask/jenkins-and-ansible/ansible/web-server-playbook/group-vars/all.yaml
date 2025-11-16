@@ -1,0 +1,12 @@
+app_name: birdwatching
+app_user: birdwatching
+app_dir: /opt/birdwatching-app
+app_port: 5000
+
+db_name:
+db_user:
+db_password: ""
+db_host: ""
+db_port:
+
+server_name: "_"

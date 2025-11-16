@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <title>Bird Gallery - Dashboard</title>
+  </head>
+
+  <body class="bg-light">
+    <header class="bg-primary text-white py-4 mb-4 shadow-sm">
+      <div class="container">
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <h1 class="display-5 fw-bold">
+              <i class="bi bi-camera2 me-2"></i>Bird Gallery
+            </h1>
+            <p class="lead mb-0">Welcome, {{ session.username }}!</p>
+          </div>
+          <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <div class="btn-group" role="group" aria-label="Navigation buttons">
+              <a
+                class="btn btn-outline-light"
+                href="{{ url_for('dashboard.user_dashboard') }}"
+              >
+                <i class="bi bi-person-circle me-1"></i>My Profile
+              </a>
+              <a
+                class="btn btn-light"
+                href="{{ url_for('photo_uploader.upload') }}"
+              >
+                <i class="bi bi-upload me-1"></i>Upload
+              </a>
+              <a
+                class="btn btn-danger"
+                href="{{ url_for('login_register.logout') }}"
+              >
+                <i class="bi bi-box-arrow-right me-1"></i>Logout
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      {% if pictures %}
+      <div class="row">
+        <div class="col-12">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-primary fw-bold">Community Photos</h2>
+            <span class="badge bg-info fs-6 rounded-pill"
+              >{{ pictures|length }} photos</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        {% for picture in pictures %}
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+          <div class="card h-100 shadow-sm border-0">
+            <a
+              href="#"
+              data-bs-toggle="modal"
+              data-bs-target="#imageModal-{{ picture.id }}"
+            >
+              <img
+                src="{{ picture.s3_url }}"
+                alt="Bird photo"
+                class="card-img-top"
+                style="height: 250px; object-fit: cover; cursor: pointer"
+              />
+            </a>
+            <div class="card-body d-flex flex-column">
+              <div class="mt-auto">
+                <p class="card-text text-muted mb-0">
+                  <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+                  <strong>Location:</strong>
+                  {% if picture.is_protected and picture.location ==
+                  "Protected!" %}
+                  <span class="text-warning fw-bold">Protected</span>
+                  <button
+                    class="btn btn-primary btn-sm ms-2"
+                    data-bs-toggle="modal"
+                    data-bs-target="#locationModal-{{ picture.id }}"
+                  >
+                    See Location
+                  </button>
+                  {% else %}
+                  <span class="text-dark">{{ picture.location }}</span>
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="modal fade"
+          id="imageModal-{{ picture.id }}"
+          tabindex="-1"
+          aria-hidden="true"
+        >
+          <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+              <div class="modal-body p-0">
+                <img
+                  src="{{ picture.s3_url }}"
+                  class="img-fluid w-100"
+                  alt="Full-size bird photo"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="modal fade"
+          id="locationModal-{{ picture.id }}"
+          tabindex="-1"
+          aria-labelledby="locationModalLabel-{{ picture.id }}"
+          aria-hidden="true"
+        >
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5
+                  class="modal-title"
+                  id="locationModalLabel-{{ picture.id }}"
+                >
+                  <i class="bi bi-lock-fill me-2"></i>Unlock Location
+                </h5>
+                <button
+                  type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Close"
+                ></button>
+              </div>
+              <form
+                action="{{ url_for('photo_uploader.index') }}"
+                method="POST"
+              >
+                <div class="modal-body">
+                  <input
+                    type="hidden"
+                    name="image_id"
+                    value="{{ picture.id }}"
+                  />
+                  <div class="mb-3">
+                    <label for="password-{{ picture.id }}" class="form-label"
+                      >Enter password to see the location:</label
+                    >
+                    <input
+                      type="password"
+                      class="form-control"
+                      name="password"
+                      id="password-{{ picture.id }}"
+                      placeholder="Password"
+                      required
+                    />
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                  >
+                    Close
+                  </button>
+                  <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="row justify-content-center mt-5">
+        <div class="col-md-8 text-center">
+          <div class="card border-0 bg-transparent">
+            <div class="card-body">
+              <i class="bi bi-camera-slash display-1 text-muted"></i>
+              <h4 class="card-title text-muted mt-3">No Photos Yet</h4>
+              <p class="card-text text-muted mb-4">
+                Be the first to share amazing bird photography with our
+                community!
+              </p>
+              <a
+                class="btn btn-primary btn-lg"
+                href="{{ url_for('photo_uploader.upload') }}"
+              >
+                <i class="bi bi-camera-fill me-2"></i>Upload Your First Photo
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </main>
+
+    <footer class="bg-dark text-white mt-5 py-4">
+      <div class="container text-center">
+        <p class="mb-0">
+          <i class="bi bi-camera2 me-2"></i>
+          Bird Watching Community © 2025
+        </p>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

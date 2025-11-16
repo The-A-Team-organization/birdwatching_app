@@ -1,0 +1,100 @@
+---
+- name: Configure Consul clients
+  hosts: consul_clients
+  become: yes
+  tasks:
+    - name: Create directories for Consul
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - /etc/consul.d
+        - /etc/consul.d/client
+
+    - name: Copy client config
+      template:
+        src: client.hcl.j2
+        dest: /etc/consul.d/client/client.hcl
+
+    - name: Write Consul systemd service
+      copy:
+        dest: /etc/systemd/system/consul-client.service
+        content: |
+          [Unit]
+          Description=Consul Service Discovery Agent
+          After=network-online.target
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/bin/consul agent -config-dir=/etc/consul.d/client
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd
+      command: systemctl daemon-reload
+
+- name: Register web service
+  hosts: web
+  become: yes
+  tasks:
+    - name: Register web service in Consul
+      template:
+        src: web.json.j2
+        dest: /etc/consul.d/client/web.json
+
+- name: Register db service
+  hosts: db
+  become: yes
+  tasks:
+    - name: Register db service in Consul
+      template:
+        src: db.json.j2
+        dest: /etc/consul.d/client/db.json
+
+- name: Register lb service
+  hosts: lb
+  become: yes
+  tasks:
+    - name: Register lb service in Consul
+      template:
+        src: lb.json.j2
+        dest: /etc/consul.d/client/lb.json
+
+- name: Continue configure Consul clients
+  hosts: consul_clients
+  become: yes
+  tasks:
+    - name: Ensure Consul client systemd service is running
+      systemd:
+        name: consul-client
+        state: restarted
+        enabled: yes
+
+    - name: Reload Consul client
+      command: consul reload
+
+- name: Configure systemd-resolved for Consul DNS
+  hosts: consul_clients
+  become: yes
+  tasks:
+    - name: Create systemd resolved config directory
+      file:
+        path: /etc/systemd/resolved.conf.d
+        state: directory
+
+    - name: Configure Consul DNS in systemd-resolved
+      copy:
+        dest: /etc/systemd/resolved.conf.d/consul.conf
+        content: |
+          [Resolve]
+          DNS=127.0.0.1:8600
+          DNSSEC=false
+          Domains=~consul
+
+    - name: Restart systemd-resolved
+      systemd:
+        name: systemd-resolved
+        state: restarted
+        enabled: yes

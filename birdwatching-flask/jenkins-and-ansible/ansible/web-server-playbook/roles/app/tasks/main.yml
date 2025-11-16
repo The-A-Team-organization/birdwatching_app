@@ -1,0 +1,53 @@
+---
+- name: Ensure virtualenv exists
+  command: python3 -m venv {{ app_dir }}/venv
+  args:
+    creates: "{{ app_dir }}/venv/bin/activate"
+  become_user: root
+
+- name: Upload Flask app file
+  copy:
+    src: web_server_with_login/
+    dest: "{{ app_dir }}/"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0644"
+
+- name: Upload requirements.txt
+  copy:
+    src: requirements.txt
+    dest: "{{ app_dir }}/requirements.txt"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0644"
+
+- name: Install Python dependencies in venv
+  pip:
+    requirements: "{{ app_dir }}/requirements.txt"
+    virtualenv: "{{ app_dir }}/venv"
+    virtualenv_python: python3
+
+- name: Render environment file
+  template:
+    src: ".env.j2"
+    dest: "/etc/{{ app_name }}.env"
+    owner: "root"
+    group: "root"
+    mode: "0640"
+
+- name: Install systemd service for Gunicorn
+  template:
+    src: "flaskapp.service.j2"
+    dest: "/etc/systemd/system/{{ app_name }}.service"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+
+- name: Reload systemd
+  command: systemctl daemon-reload
+
+- name: Enable and start {{ app_name }}
+  service:
+    name: "{{ app_name }}"
+    state: restarted
+    enabled: yes

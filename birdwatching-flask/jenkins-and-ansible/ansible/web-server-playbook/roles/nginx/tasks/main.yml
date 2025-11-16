@@ -1,0 +1,58 @@
+---
+# Optional: show what is on :80 (useful for debugging)
+- name: Check port 80 usage
+  shell: "ss -ltnp | grep ':80 ' || true"
+  register: port80
+  changed_when: false
+
+- name: Debug port 80 usage
+  debug:
+    var: port80.stdout
+
+# Remove default site to avoid conflicts
+- name: Remove default site (optional)
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify:
+    - Test nginx config
+    - Reload nginx
+
+# Place our site
+- name: Place NGINX site config
+  template:
+    src: flaskapp.conf.j2
+    dest: /etc/nginx/sites-available/{{ app_name }}.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Test nginx config
+    - Reload nginx
+
+# Enable our site
+- name: Enable site
+  file:
+    src: /etc/nginx/sites-available/{{ app_name }}.conf
+    dest: /etc/nginx/sites-enabled/{{ app_name }}.conf
+    state: link
+  notify:
+    - Test nginx config
+    - Reload nginx
+
+# Proactively validate before starting
+- name: Validate nginx config (pre-start)
+  command: nginx -t
+  register: nginx_config_test
+  changed_when: false
+
+- name: Show nginx -t output
+  debug:
+    var: nginx_config_test.stderr_lines
+
+# Start nginx
+- name: Ensure nginx is running
+  service:
+    name: nginx
+    state: started
+    enabled: yes

@@ -1,0 +1,88 @@
+- name: Set APT to noninteractive for this play
+  ansible.builtin.set_fact:
+    apt_env:
+      DEBIAN_FRONTEND: noninteractive
+
+- name: Ensure dpkg is configured if previously interrupted
+  ansible.builtin.command: dpkg --configure -a
+  changed_when: false
+  failed_when: false
+  environment: "{{ apt_env }}"
+  become: yes
+
+- name: Remove stale apt lists (safe)
+  ansible.builtin.file:
+    path: /var/lib/apt/lists
+    state: absent
+  become: yes
+
+- name: Recreate apt lists directory
+  ansible.builtin.file:
+    path: /var/lib/apt/lists/partial
+    state: directory
+    mode: "0755"
+  become: yes
+
+- name: Update apt packages
+  become: yes
+  apt:
+    update_cache: yes
+
+- name: Install software-properties-common
+  ansible.builtin.apt:
+    name: software-properties-common
+    state: present
+  become: yes
+
+- name: Enable universe repo
+  ansible.builtin.command: add-apt-repository -y universe
+  environment: "{{ apt_env }}"
+  become: yes
+
+- name: Update apt cache (robust)
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+    force_apt_get: yes
+    lock_timeout: 120
+  register: apt_update
+  retries: 5
+  delay: 10
+  until: apt_update is succeeded
+  environment: "{{ apt_env }}"
+  become: yes
+
+- name: Install base packages (robust, no extra cache refresh)
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    force_apt_get: yes
+    lock_timeout: 120
+  loop:
+    - python3
+    - python3-venv
+    - python3-pip
+    - nginx
+    - python3-psycopg2
+  register: pkg_install
+  retries: 5
+  delay: 10
+  until: pkg_install is succeeded
+  environment: "{{ apt_env }}"
+  become: yes
+
+- name: Create application user
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    system: yes
+    create_home: yes
+    home: "/home/{{ app_user }}"
+    shell: /usr/sbin/nologin
+
+- name: Create app directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0755"

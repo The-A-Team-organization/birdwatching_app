@@ -1,0 +1,124 @@
+---
+- hosts: lb
+  name: Install lynis on the loadbalancer
+  become: yes
+  become_method: sudo
+  vars:
+    package_to_add: aha
+    package_to_add2: lynis
+  tasks:
+    - name: Install aha
+      package:
+        name: aha
+        state: present
+
+    - name: Install lynis
+      package:
+        name: lynis
+        state: present
+
+    #- name: Add cron job for lynis
+    #  script: cron-for-lynis.sh
+
+- hosts: lb
+  name: Install Consul template precompiled binary
+  become: yes
+  tasks:
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - wget
+          - gpg
+          - coreutils
+        state: present
+        update_cache: yes
+
+    - name: Add Hashicorp GPG key
+      ansible.builtin.shell: |
+        wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg --yes
+      args:
+        executable: /bin/bash
+
+    - name: Add Hashicorp repository
+      ansible.builtin.shell: |
+        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+        | tee /etc/apt/sources.list.d/hashicorp.list
+      args:
+        creates: /etc/apt/sources.list.d/hashicorp.list
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install Consul template
+      ansible.builtin.apt:
+        name: consul-template
+        state: present
+
+- hosts: lb
+  become: yes
+  vars:
+    port: "{{nginxlb_port}}"
+  tasks:
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: Start nginx
+      service:
+        name: nginx
+        state: started
+        enabled: True
+
+    - name: Create directory for consul templates
+      file:
+        path: /etc/consul-templates
+        state: directory
+
+    - name: Copy load balancer template
+      copy:
+        src: templates/load-balancer.tpl
+        dest: /etc/consul-templates/load-balancer.tpl
+
+    - name: Copy consul-template configuration
+      copy:
+        src: templates/load-balancer.tpl.hcl
+        dest: /etc/consul-templates/load-balancer.hcl
+
+    - name: Push Nginx LB port to Consul KV
+      ansible.builtin.shell: |
+        consul kv put nginx/lb_port {{ nginxlb_port }}
+      args:
+        executable: /bin/bash
+
+    - name: Copy systemd service file for consul-template
+      copy:
+        dest: /etc/systemd/system/consul-template.service
+        content: |
+          [Unit]
+          Description=Consul Template
+          After=network.target
+
+          [Service]
+          Environment="NGINX_LB_PORT={{ nginxlb_port }}"
+          ExecStart=/usr/bin/consul-template -config /etc/consul-templates/load-balancer.hcl
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start consul-template service
+      systemd:
+        name: consul-template
+        state: started
+        enabled: yes
+
+    - name: Remove default file
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Check configuration
+      command: sudo systemctl reload nginx

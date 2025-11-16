@@ -1,0 +1,14 @@
+server = false
+datacenter = "dc1"
+node_name = "{{ node_name }}"
+data_dir = "/var/lib/consul"
+bind_addr = "{{ ansible_host }}"
+advertise_addr = "{{ ansible_host }}"
+client_addr = "0.0.0.0"
+ui_config {
+  enabled = true
+}
+
+retry_join = ["{{ hostvars[groups['consul_servers'][0]].ansible_host }}"]
+
+enable_script_checks = true

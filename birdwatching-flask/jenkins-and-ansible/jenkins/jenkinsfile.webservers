@@ -1,0 +1,42 @@
+pipeline {
+    agent any
+
+    environment {
+        DB_USER = credentials('DB_USER')
+        DB_PASS = credentials('DB_PASS')
+        DB_NAME = credentials('DB_NAME')
+        DB_HOST = credentials('DB_HOST')
+        DB_PORT = credentials('DB_PORT')
+        APP_PORT = credentials('APP_PORT')
+        SECRET_KEY = credentials('SECRET_KEY')
+        S3_BUCKET = credentials('S3_BUCKET')
+        S3_REGION = credentials('S3_REGION')
+        APP_USER   = credentials('APP_USER')
+        APP_DIR    = credentials('APP_DIR')
+        APP_NAME   = credentials('APP_NAME')
+        ANSIBLE_INVENTORY='/etc/ansible/hosts'
+        ANSIBLE_PLAYBOOK='/var/lib/jenkins/workspace/jenkinsfile.webservers/birdwatching-flask/jenkins-and-ansible/ansible/web-server-playbook/playbook-nginx-rp-with-flask-configure.yaml'
+    }
+
+    stages {
+        stage('Checkout git') {
+            steps {
+                git branch: 'main', 
+                    credentialsId: 'git_user_ssh', 
+                    url: 'git@github.com:Maars-Team/birdwatching-app.git'
+                sh "ls -lart ./*"
+            }
+        }
+
+        stage('Deploy to Webserver') {
+            steps {
+                dir('birdwatching-flask/jenkins-and-ansible/ansible/web-server-playbook') {
+                sshagent(credentials: ['private_key']) {
+                        sh 'make ansible-playbook'
+                }
+                }
+            }
+        }
+    }
+}
+

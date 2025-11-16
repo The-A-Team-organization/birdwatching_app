@@ -1,0 +1,27 @@
+- name: Deploy Flask + NGINX
+
+  hosts: web
+  become: yes
+  roles:
+    - common
+    - app
+    - nginx
+- name: Install lynis on the WebServers
+  hosts: web
+  become: yes
+  become_method: sudo
+  vars:
+    package_to_add: aha
+    package_to_add2: lynis
+  tasks:
+    - name: Install aha
+      package:
+        name: aha
+        state: present
+
+    - name: Install lynis
+      package:
+        name: lynis
+        state: present
+#    - name: Add cron job for lynis
+#     script: cron-for-lynis.sh

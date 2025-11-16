@@ -1,0 +1,26 @@
+pipeline {
+    agent any
+
+    environment {
+        NGINX_LB_PORT = credentials('NGINX_LB_PORT')
+        ANSIBLE_INVENTORY='/etc/ansible/hosts'
+        ANSIBLE_PLAYBOOK='/var/lib/jenkins/workspace/jenkinsfile.nginx-lb/birdwatching-flask/jenkins-and-ansible/ansible/lb-playbook/playbook-nginx-lb-configure.yaml'
+    }
+    stages {
+        stage('Checkout git') {
+            steps {
+                git branch: 'main', credentialsId: 'git_user_ssh', url: 'git@github.com:Maars-Team/birdwatching-app.git'
+                sh "ls -lart ./*"
+                }
+            }
+        stage('Run Ansible playbook') {
+            steps {
+            dir('birdwatching-flask/jenkins-and-ansible/ansible/lb-playbook') {
+                sshagent(credentials: ['private_key']) {
+                        sh 'make ansible-playbook'
+                }
+            }
+            }
+        }
+    }
+}

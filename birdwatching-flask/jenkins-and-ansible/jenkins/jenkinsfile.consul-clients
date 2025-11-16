@@ -1,0 +1,28 @@
+pipeline {
+    agent any
+
+    environment {
+        ANSIBLE_INVENTORY = '/etc/ansible/hosts'
+        ANSIBLE_PLAYBOOK = '/var/lib/jenkins/workspace/jenkinsfile.consul-clients/birdwatching-flask/jenkins-and-ansible/ansible/consul-playbook/consul-client.yaml'
+    }
+
+    stages {
+        stage('Checkout git') {
+            steps {
+                git branch: 'main', credentialsId: 'git_user_ssh', url: 'git@github.com:Maars-Team/birdwatching-app.git'
+                sh "ls -lart ./*"
+            }
+        }
+
+        stage('Run Ansible playbook') {
+            steps {
+                dir('birdwatching-flask/jenkins-and-ansible/ansible/consul-playbook') {
+                    sshagent(credentials: ['private_key']) {
+                        sh 'make ansible-playbook'
+                    }
+                }
+            }
+        }
+    }
+}
+

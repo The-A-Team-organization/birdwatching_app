@@ -1,0 +1,91 @@
+---
+- hosts: db
+  become_method: sudo
+
+  vars:
+    db_user: "{{ db_user }}"
+    db_password: "{{ db_password }}"
+    db_name: "{{ db_name }}"
+    package_to_add: aha
+    package_to_add2: lynis
+
+  become: true
+  tasks:
+    - name: Install aha
+      package:
+        name: aha
+        state: present
+
+    - name: Install lynis
+      package:
+        name: lynis
+        state: present
+
+    #    - name: Add cron job for lynis
+    #      script: cron-for-lynis.sh
+    # Temporarily disabled: this task causes an unclear error in Jenkins, and since we currently have nowhere to store the cron logs,it is commented to allow the playbook to run successfully.
+
+    - name: Setup database playbook
+      ansible.builtin.apt:
+        update_cache: yes
+        name:
+          - postgresql
+          - pip
+          - python3-pip
+          - python3-dev
+          - libpq-dev
+          - python3-psycopg2
+
+    - name: Install Python
+      package:
+        name: python3
+        state: present
+
+    - name: enable postgresql
+      service:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Add listeners to db
+      community.postgresql.postgresql_pg_hba:
+        dest: /etc/postgresql/16/main/pg_hba.conf
+        contype: host
+        users: all
+        address: 0.0.0.0/0
+        databases: all
+        method: trust
+        create: true
+
+    - name: Allow local connections for postgres user
+      community.postgresql.postgresql_pg_hba:
+        dest: /etc/postgresql/16/main/pg_hba.conf
+        contype: local
+        users: postgres
+        databases: all
+        method: trust
+        create: true
+
+    - name: restart Postgre
+      ansible.builtin.shell: |
+        sudo systemctl restart postgresql.service
+      become: true
+
+    - name: Select query to test_db with named_args
+      community.postgresql.postgresql_query:
+        query: "ALTER SYSTEM SET listen_addresses TO '*';"
+        login_user: postgres
+        autocommit: yes
+
+    - name: Set up DB
+
+      community.postgresql.postgresql_db:
+        name: "{{ db_name }}"
+        login_user: postgres
+      notify: restart Postgre
+
+  handlers:
+    - name: restart Postgre
+      ansible.builtin.shell: |
+        sudo systemctl restart postgresql.service
+      become: true

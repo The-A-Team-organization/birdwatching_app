@@ -1,0 +1,14 @@
+[Unit]
+Description=Gunicorn for {{ app_name }}
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory={{ app_dir }}
+EnvironmentFile=/etc/{{ app_name }}.env
+ExecStart={{ app_dir }}/venv/bin/gunicorn -b 127.0.0.1:{{ app_port }} main:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
