@@ -16,7 +16,6 @@ pipeline {
         stage('Checkout') {
             steps {
                 git url: 'https://github.com/Maars-Team/birdwatching-app.git', branch: 'main'
-                sh "ls -lart ${WORKSPACE}"
             }
         }
 
@@ -43,22 +42,30 @@ pipeline {
             }
         }
 
-        stage('Assume Role') {
+        stage('Assume Role Safely') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                                   credentialsId: "${env.AWS_CREDENTIALS_ID}"]]) {
 
-                    sh """
-                        CREDS=\$(aws sts assume-role \
-                          --role-arn ${env.AWS_ROLE_ARN} \
-                          --role-session-name ansible-ssm-session-${params.ENV})
+                    script {
 
-                        export AWS_ACCESS_KEY_ID=\$(echo \$CREDS | jq -r '.Credentials.AccessKeyId')
-                        export AWS_SECRET_ACCESS_KEY=\$(echo \$CREDS | jq -r '.Credentials.SecretAccessKey')
-                        export AWS_SESSION_TOKEN=\$(echo \$CREDS | jq -r '.Credentials.SessionToken')
+                        def credsJson = sh(
+                            script: """
+                                aws sts assume-role \
+                                  --role-arn ${env.AWS_ROLE_ARN} \
+                                  --role-session-name ansible-ssm-${params.ENV} \
+                                  --output json
+                            """,
+                            returnStdout: true
+                        ).trim()
 
-                        aws sts get-caller-identity
-                    """
+                        def parsed = readJSON text: credsJson
+
+                        env.AWS_ACCESS_KEY_ID     = parsed.Credentials.AccessKeyId
+                        env.AWS_SECRET_ACCESS_KEY = parsed.Credentials.SecretAccessKey
+                        env.AWS_SESSION_TOKEN     = parsed.Credentials.SessionToken
+
+                    }
                 }
             }
         }
