@@ -2,7 +2,7 @@
 - name: Test SSM connectivity
   hosts: consul_clients
   gather_facts: no
-  connection: community.aws.aws_ssm
+  connection: aws_ssm
 
   tasks:
     - name: Check uptime
