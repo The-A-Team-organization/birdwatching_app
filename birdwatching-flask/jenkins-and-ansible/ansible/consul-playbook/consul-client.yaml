@@ -2,6 +2,8 @@
 - name: Test SSM connectivity
   hosts: consul_clients
   gather_facts: no
+  connection: community.aws.aws_ssm
+
   tasks:
     - name: Check uptime
       command: uptime
