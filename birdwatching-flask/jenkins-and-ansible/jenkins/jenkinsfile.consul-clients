@@ -46,30 +46,21 @@ pipeline {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
                                   credentialsId: "${env.AWS_CREDENTIALS_ID}"]]) {
 
-                    script {
+                    sh '''
+                        CREDS=$(aws sts assume-role \
+                          --role-arn ${AWS_ROLE_ARN} \
+                          --role-session-name ansible-ssm-session-${ENV} \
+                          --output json)
 
-                        def credsJson = sh(
-                            script: """
-                                aws sts assume-role \
-                                  --role-arn ${env.AWS_ROLE_ARN} \
-                                  --role-session-name ansible-ssm-${params.ENV} \
-                                  --output json
-                            """,
-                            returnStdout: true
-                        ).trim()
+                        export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r '.Credentials.AccessKeyId')
+                        export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r '.Credentials.SecretAccessKey')
+                        export AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r '.Credentials.SessionToken')
 
-                        def parsed = new groovy.json.JsonSlurper().parseText(credsJson)
-
-                        env.AWS_ACCESS_KEY_ID     = parsed.Credentials.AccessKeyId
-                        env.AWS_SECRET_ACCESS_KEY = parsed.Credentials.SecretAccessKey
-                        env.AWS_SESSION_TOKEN     = parsed.Credentials.SessionToken
-
-                        sh "aws sts get-caller-identity"
-                    }
+                        aws sts get-caller-identity
+                    '''
                 }
             }
         }
-
 
 
         stage('Run Ansible') {
