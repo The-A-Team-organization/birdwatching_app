@@ -62,6 +62,10 @@ pipeline {
 
                         set -x
                         aws sts get-caller-identity
+                        aws ssm describe-instance-information --region ${AWS_REGION}
+                        aws ssm describe-instance-information --filters "Key=InstanceIds,Values=i-06e4c706690740117" --region ${AWS_REGION}
+                        aws ssm start-session --target i-06e4c706690740117 --region ${AWS_REGION} || echo "SSM SESSION FAILED"
+
                     """
                 }
             }
