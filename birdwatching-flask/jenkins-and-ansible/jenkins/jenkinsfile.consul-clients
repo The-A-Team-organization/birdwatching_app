@@ -19,7 +19,7 @@ pipeline {
         stage('Set AWS Role') {
             steps {
                 script {
-                    def credsId  // Add 'def' to fix the warning
+                    def credsId
                     if (params.ENV == 'dev') {
                         credsId = "aws-dev-account-id"
                         env.AWS_CREDENTIALS_ID = "aws-dev-account-key"
@@ -45,7 +45,6 @@ pipeline {
                     dir('birdwatching-flask/jenkins-and-ansible/ansible/consul-playbook') {
                         sh """
                             set +x
-                            echo "=== Assuming Role ==="
                             CREDS=\$(aws sts assume-role \
                               --role-arn ${env.AWS_ROLE_ARN} \
                               --role-session-name ansible-ssm-session-${params.ENV})
@@ -55,14 +54,6 @@ pipeline {
                             export AWS_SESSION_TOKEN=\$(echo \$CREDS | jq -r '.Credentials.SessionToken')
                             export AWS_DEFAULT_REGION=${AWS_REGION}
                             
-                            set -x
-                            echo "=== Verifying Assumed Role (should show prod account 896015496924) ==="
-                            aws sts get-caller-identity
-                            
-                            echo "=== Checking SSM Access ==="
-                            aws ssm describe-instance-information --region ${AWS_REGION} --max-items 1
-                            echo $HOME
-                            echo "=== Running Ansible ==="
                             ansible-playbook \
                               -i ${env.ANSIBLE_INVENTORY} \
                               ${env.ANSIBLE_PLAYBOOK} \
@@ -76,3 +67,4 @@ pipeline {
         }
     }
 }
+
