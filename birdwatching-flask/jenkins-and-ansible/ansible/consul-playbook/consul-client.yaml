@@ -7,6 +7,24 @@
     ansible_region: "eu-central-1"
     ansible_aws_ssm_bucket_name: "ansible-ssm-bucket-oleg"
   tasks:
+    - name: Download Consul
+      get_url:
+        url: "https://releases.hashicorp.com/consul/1.16.2/consul_1.16.2_linux_amd64.zip"
+        dest: "/tmp/consul.zip"
+
+    - name: Unzip Consul
+      unarchive:
+        src: "/tmp/consul.zip"
+        dest: "/usr/local/bin/"
+        remote_src: yes
+        mode: '0755'
+
+    - name: Ensure /usr/local/bin/consul is executable
+      file:
+        path: "/usr/local/bin/consul"
+        mode: '0755'
+        state: file
+
     - name: Create directories for Consul
       file:
         path: "{{ item }}"
@@ -30,7 +48,7 @@
 
           [Service]
           Type=simple
-          ExecStart=/usr/bin/consul agent -config-dir=/etc/consul.d/client
+          ExecStart=/usr/local/bin/consul agent -config-dir=/etc/consul.d/client
           Restart=on-failure
 
           [Install]
@@ -93,7 +111,7 @@
         enabled: yes
 
     - name: Reload Consul client
-      command: consul reload
+      command: /usr/local/bin/consul reload
 
 - name: Configure systemd-resolved for Consul DNS
   hosts: consul_clients
