@@ -38,6 +38,51 @@ pipeline {
                 }
             }
         }
+        stage('Debug SSM Plugin') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                  credentialsId: "${env.AWS_CREDENTIALS_ID}"]]) {
+                    sh """
+                        set +x
+                        CREDS=\$(aws sts assume-role \
+                          --role-arn ${env.AWS_ROLE_ARN} \
+                          --role-session-name ansible-ssm-session-${params.ENV})
+                        
+                        export AWS_ACCESS_KEY_ID=\$(echo \$CREDS | jq -r '.Credentials.AccessKeyId')
+                        export AWS_SECRET_ACCESS_KEY=\$(echo \$CREDS | jq -r '.Credentials.SecretAccessKey')
+                        export AWS_SESSION_TOKEN=\$(echo \$CREDS | jq -r '.Credentials.SessionToken')
+                        export AWS_DEFAULT_REGION=${AWS_REGION}
+                        
+                        set -x
+                        echo "=== Python SSM Connection Test ==="
+                        python3 << 'PYTHON_EOF'
+        import boto3
+        import os
+
+        print("AWS_ACCESS_KEY_ID:", "SET" if os.environ.get('AWS_ACCESS_KEY_ID') else "NOT SET")
+        print("AWS_SECRET_ACCESS_KEY:", "SET" if os.environ.get('AWS_SECRET_ACCESS_KEY') else "NOT SET")
+        print("AWS_SESSION_TOKEN:", "SET" if os.environ.get('AWS_SESSION_TOKEN') else "NOT SET")
+        print("AWS_DEFAULT_REGION:", os.environ.get('AWS_DEFAULT_REGION', 'NOT SET'))
+
+        try:
+            ssm_client = boto3.client('ssm', region_name='eu-central-1')
+            print("\\nSSM Client created successfully")
+            
+            # Test SSM connectivity
+            response = ssm_client.describe_instance_information(
+                InstanceInformationFilterList=[
+                    {'key': 'InstanceIds', 'valueSet': ['i-06e4c706690740117']}
+                ]
+            )
+            print("\\nSSM connectivity test passed!")
+            print(f"Found instance: {response['InstanceInformationList'][0]['InstanceId']}")
+        except Exception as e:
+            print(f"\\nError: {e}")
+        PYTHON_EOF
+                    """
+                }
+            }
+        }
         stage('Assume Role and Run Ansible') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
