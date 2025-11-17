@@ -61,7 +61,7 @@ pipeline {
                             
                             echo "=== Checking SSM Access ==="
                             aws ssm describe-instance-information --region ${AWS_REGION} --max-items 1
-                            
+                            echo $HOME
                             echo "=== Running Ansible ==="
                             ansible-playbook \
                               -i ${env.ANSIBLE_INVENTORY} \
