@@ -7,25 +7,47 @@ pipeline {
 
     environment {
         AWS_REGION = "eu-central-1"
-
-        DB_USER = credentials('DB_USER')
-        DB_PASS = credentials('DB_PASS')
-        DB_NAME = credentials('DB_NAME')
-        DB_HOST = credentials('DB_HOST')
-        DB_PORT = credentials('DB_PORT')
-        APP_PORT = credentials('APP_PORT')
-        SECRET_KEY = credentials('SECRET_KEY')
-        S3_BUCKET = credentials('S3_BUCKET')
-        S3_REGION = credentials('S3_REGION')
-        APP_USER = credentials('APP_USER')
-        APP_DIR = credentials('APP_DIR')
-        APP_NAME = credentials('APP_NAME')
-
         ANSIBLE_PLAYBOOK = "${WORKSPACE}/birdwatching-flask/jenkins-and-ansible/ansible/web-server-playbook/playbook-nginx-rp-with-flask-configure.yaml"
         ANSIBLE_INVENTORY = "${WORKSPACE}/birdwatching-flask/jenkins-and-ansible/ansible/web-server-playbook/inventory.ini"
     }
 
     stages {
+        
+         stage('Load ENV Credentials') {
+            steps {
+                script {
+                    echo "Loading environment-specific credentials for ${params.ENV}"
+
+                    withCredentials([
+                        string(credentialsId: "DB_USER_${params.ENV}", variable: 'DB_USER_VAL'),
+                        string(credentialsId: "DB_PASS_${params.ENV}", variable: 'DB_PASS_VAL'),
+                        string(credentialsId: "DB_NAME_${params.ENV}", variable: 'DB_NAME_VAL'),
+                        string(credentialsId: "DB_HOST_${params.ENV}", variable: 'DB_HOST_VAL'),
+                        string(credentialsId: "DB_PORT_${params.ENV}", variable: 'DB_PORT_VAL'),
+                        string(credentialsId: "APP_PORT_${params.ENV}", variable: 'APP_PORT_VAL'),
+                        string(credentialsId: "SECRET_KEY_${params.ENV}", variable: 'SECRET_KEY_VAL'),
+                        string(credentialsId: "S3_BUCKET_${params.ENV}", variable: 'S3_BUCKET_VAL'),
+                        string(credentialsId: "S3_REGION_${params.ENV}", variable: 'S3_REGION_VAL'),
+                        string(credentialsId: "APP_USER_${params.ENV}", variable: 'APP_USER_VAL'),
+                        string(credentialsId: "APP_DIR_${params.ENV}", variable: 'APP_DIR_VAL'),
+                        string(credentialsId: "APP_NAME_${params.ENV}", variable: 'APP_NAME_VAL')
+                    ]) {
+                        env.DB_USER = DB_USER_VAL
+                        env.DB_PASS = DB_PASS_VAL
+                        env.DB_NAME = DB_NAME_VAL
+                        env.DB_HOST = DB_HOST_VAL
+                        env.DB_PORT = DB_PORT_VAL
+                        env.APP_PORT = APP_PORT_VAL
+                        env.SECRET_KEY = SECRET_KEY_VAL
+                        env.S3_BUCKET = S3_BUCKET_VAL
+                        env.S3_REGION = S3_REGION_VAL
+                        env.APP_USER = APP_USER_VAL
+                        env.APP_DIR = APP_DIR_VAL
+                        env.APP_NAME = APP_NAME_VAL
+                    }
+                }
+            }
+        }
 
         stage('Checkout') {
             steps {

@@ -7,16 +7,29 @@ pipeline {
 
     environment {
         AWS_REGION = "eu-central-1"
-
-        DB_USER = credentials('DB_USER')
-        DB_PASS = credentials('DB_PASS')
-        DB_NAME = credentials('DB_NAME')
-
         ANSIBLE_PLAYBOOK = "${WORKSPACE}/birdwatching-flask/jenkins-and-ansible/ansible/db-playbook/db-configure-playbook.yaml"
         ANSIBLE_INVENTORY = "${WORKSPACE}/birdwatching-flask/jenkins-and-ansible/ansible/db-playbook/inventory.ini"
     }
 
     stages {
+
+        stage('Load ENV Credentials') {
+            steps {
+                script {
+                    echo "Loading DB credentials for environment: ${params.ENV}"
+
+                    withCredentials([
+                        string(credentialsId: "DB_USER_${params.ENV}", variable: "DB_USER_VAL"),
+                        string(credentialsId: "DB_PASS_${params.ENV}", variable: "DB_PASS_VAL"),
+                        string(credentialsId: "DB_NAME_${params.ENV}", variable: "DB_NAME_VAL")
+                    ]) {
+                        env.DB_USER = DB_USER_VAL
+                        env.DB_PASS = DB_PASS_VAL
+                        env.DB_NAME = DB_NAME_VAL
+                    }
+                }
+            }
+        }
 
         stage('Checkout') {
             steps {

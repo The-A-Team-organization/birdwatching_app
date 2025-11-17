@@ -6,14 +6,23 @@ pipeline {
     }
 
     environment {
-        NGINX_LB_PORT = credentials('NGINX_LB_PORT')
         AWS_REGION = "eu-central-1"
         ANSIBLE_PLAYBOOK = "${WORKSPACE}/birdwatching-flask/jenkins-and-ansible/ansible/lb-playbook/playbook-nginx-lb-configure.yaml"
         ANSIBLE_INVENTORY = "${WORKSPACE}/birdwatching-flask/jenkins-and-ansible/ansible/lb-playbook/inventory.ini"
     }
 
     stages {
-
+        stage('Load ENV Credentials') {
+            steps {
+                script {
+                    withCredentials([
+                        string(credentialsId: "NGINX_LB_PORT_${params.ENV}", variable: "NGINX_LB_PORT_VAL")
+                    ]) {
+                        env.NGINX_LB_PORT = NGINX_LB_PORT_VAL
+                    }
+                }
+            }
+        }
         stage('Checkout') {
             steps {
                 git url: 'https://github.com/The-A-Team-organization/birdwatching_app.git',
