@@ -69,7 +69,7 @@ pipeline {
                               ${env.ANSIBLE_PLAYBOOK} \
                               --extra-vars "aws_region=${env.AWS_REGION}" \
                               --extra-vars "env=${params.ENV}" \
-                              --extra-vars "nginx_lb_port=${env.NGINX_LB_PORT}" \
+                              --extra-vars "nginxlb_port=${env.NGINX_LB_PORT}" \
                               -vvv
                         """
                     }
