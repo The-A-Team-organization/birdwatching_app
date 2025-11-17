@@ -1,10 +1,17 @@
 ---
 - name: Test SSM connectivity
-  hosts: consul_clients
-  gather_facts: no
-  connection: aws_ssm
+  hosts: ssm_targets
+  gather_facts: false
+
+  vars:
+    ansible_connection: aws_ssm
+    ansible_region: "eu-central-1"
+    ansible_aws_ssm_bucket_name: "ansible-ssm-bucket-oleg"
 
   tasks:
-    - name: Check uptime
-      command: uptime
+    - name: Run uptime command via SSM
+      ansible.builtin.shell: "uptime"
+      register: output
 
+    - debug:
+        var: output.stdout
