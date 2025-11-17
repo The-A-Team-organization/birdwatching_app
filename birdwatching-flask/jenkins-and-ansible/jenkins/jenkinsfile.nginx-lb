@@ -1,26 +1,81 @@
 pipeline {
     agent any
 
+    parameters {
+        choice(name: 'ENV', choices: ['dev', 'stage', 'prod'], description: 'Select environment')
+    }
+
     environment {
         NGINX_LB_PORT = credentials('NGINX_LB_PORT')
-        ANSIBLE_INVENTORY='/etc/ansible/hosts'
-        ANSIBLE_PLAYBOOK='/var/lib/jenkins/workspace/jenkinsfile.nginx-lb/birdwatching-flask/jenkins-and-ansible/ansible/lb-playbook/playbook-nginx-lb-configure.yaml'
+        AWS_REGION = "eu-central-1"
+        ANSIBLE_PLAYBOOK = "${WORKSPACE}/birdwatching-flask/jenkins-and-ansible/ansible/lb-playbook/playbook-nginx-lb-configure.yaml"
+        ANSIBLE_INVENTORY = "${WORKSPACE}/birdwatching-flask/jenkins-and-ansible/ansible/lb-playbook/inventory.ini"
     }
+
     stages {
-        stage('Checkout git') {
+
+        stage('Checkout') {
             steps {
-                git branch: 'main', credentialsId: 'git_user_ssh', url: 'git@github.com:Maars-Team/birdwatching-app.git'
-                sh "ls -lart ./*"
+                git url: 'https://github.com/The-A-Team-organization/birdwatching_app.git',
+                    branch: 'TAT-97-Set-up-new-repo-and-update-Jenkins-pipeline-for-SSM-based-deployment'
+                sh "ls -lart ${WORKSPACE}"
+            }
+        }
+
+        stage('Set AWS Role') {
+            steps {
+                script {
+                    def credsId
+                    if (params.ENV == 'dev') {
+                        credsId = "aws-dev-account-id"
+                        env.AWS_CREDENTIALS_ID = "aws-dev-account-key"
+                    } else if (params.ENV == 'stage') {
+                        credsId = "aws-stage-account-id"
+                        env.AWS_CREDENTIALS_ID = "aws-stage-account-key"
+                    } else if (params.ENV == 'prod') {
+                        credsId = "aws-prod-account-id"
+                        env.AWS_CREDENTIALS_ID = "aws-prod-account-key"
+                    } else {
+                        error "Unknown environment: ${params.ENV}"
+                    }
+
+                    withCredentials([string(credentialsId: credsId, variable: 'AWS_ACCOUNT_ID')]) {
+                        env.AWS_ROLE_ARN = "arn:aws:iam::${AWS_ACCOUNT_ID}:role/TerraformRole${params.ENV.capitalize()}"
+                    }
                 }
             }
-        stage('Run Ansible playbook') {
+        }
+
+        stage('Assume Role and Run Ansible') {
             steps {
-            dir('birdwatching-flask/jenkins-and-ansible/ansible/lb-playbook') {
-                sshagent(credentials: ['private_key']) {
-                        sh 'make ansible-playbook'
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                  credentialsId: "${env.AWS_CREDENTIALS_ID}"]]) {
+
+                    dir('birdwatching-flask/jenkins-and-ansible/ansible/lb-playbook') {
+
+                        sh """
+                            set +x
+                            CREDS=\$(aws sts assume-role \
+                              --role-arn ${env.AWS_ROLE_ARN} \
+                              --role-session-name ansible-ssm-session-${params.ENV})
+
+                            export AWS_ACCESS_KEY_ID=\$(echo \$CREDS | jq -r '.Credentials.AccessKeyId')
+                            export AWS_SECRET_ACCESS_KEY=\$(echo \$CREDS | jq -r '.Credentials.SecretAccessKey')
+                            export AWS_SESSION_TOKEN=\$(echo \$CREDS | jq -r '.Credentials.SessionToken')
+                            export AWS_DEFAULT_REGION=${AWS_REGION}
+
+                            ansible-playbook \
+                              -i ${env.ANSIBLE_INVENTORY} \
+                              ${env.ANSIBLE_PLAYBOOK} \
+                              --extra-vars "aws_region=${env.AWS_REGION}" \
+                              --extra-vars "env=${params.ENV}" \
+                              --extra-vars "nginx_lb_port=${env.NGINX_LB_PORT}" \
+                              -vvv
+                        """
+                    }
                 }
-            }
             }
         }
     }
 }
+
