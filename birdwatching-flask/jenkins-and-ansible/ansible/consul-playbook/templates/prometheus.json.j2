@@ -1,0 +1,13 @@
+{
+  "service": {
+    "name": "prometheus",
+    "port": 9090,
+    "checks": [
+      {
+        "http": "http://localhost:9090/-/ready",
+        "interval": "10s"
+      }
+    ]
+  }
+}
+
