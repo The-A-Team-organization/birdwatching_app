@@ -3,6 +3,11 @@
   args:
     creates: "{{ app_dir }}/venv/bin/activate"
 
+- name: Ensure pip in venv
+  command: "{{ app_dir }}/venv/bin/python -m ensurepip --upgrade"
+  args:
+    creates: "{{ app_dir }}/venv/bin/pip"
+
 - name: Ensure app directory has correct permissions
   file:
     path: "{{ app_dir }}"
@@ -31,29 +36,4 @@
   pip:
     requirements: "{{ app_dir }}/requirements.txt"
     executable: "{{ app_dir }}/venv/bin/pip"
-
-- name: Render environment file
-  template:
-    src: ".env.j2"
-    dest: "/etc/{{ app_name }}.env"
-    owner: "root"
-    group: "root"
-    mode: "0640"
-
-- name: Install systemd service for Gunicorn
-  template:
-    src: "flaskapp.service.j2"
-    dest: "/etc/systemd/system/{{ app_name }}.service"
-    owner: "root"
-    group: "root"
-    mode: "0644"
-
-- name: Reload systemd
-  command: systemctl daemon-reload
-
-- name: Enable and start {{ app_name }}
-  service:
-    name: "{{ app_name }}"
-    state: restarted
-    enabled: yes
 
