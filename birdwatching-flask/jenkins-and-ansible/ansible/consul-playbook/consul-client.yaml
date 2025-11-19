@@ -7,6 +7,11 @@
     ansible_region: "eu-central-1"
     ansible_aws_ssm_bucket_name: "ansible-ssm-bucket-oleg"
   tasks:
+    - name: Install unzip
+      package:
+        name: unzip
+        state: present
+  tasks:
     - name: Download Consul
       get_url:
         url: "https://releases.hashicorp.com/consul/1.16.2/consul_1.16.2_linux_amd64.zip"
