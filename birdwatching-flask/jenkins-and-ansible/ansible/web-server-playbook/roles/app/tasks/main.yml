@@ -1,17 +1,23 @@
----
 - name: Ensure virtualenv exists
   command: python3 -m venv {{ app_dir }}/venv
   args:
     creates: "{{ app_dir }}/venv/bin/activate"
-  become_user: root
 
-- name: Upload Flask app file
+- name: Ensure app directory has correct permissions
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0755"
+
+- name: Upload Flask app directory
   copy:
     src: web_server_with_login/
     dest: "{{ app_dir }}/"
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
-    mode: "0644"
+    mode: "0755"
 
 - name: Upload requirements.txt
   copy:
@@ -26,6 +32,7 @@
     requirements: "{{ app_dir }}/requirements.txt"
     virtualenv: "{{ app_dir }}/venv"
     virtualenv_python: python3
+    executable: "{{ app_dir }}/venv/bin/pip"
 
 - name: Render environment file
   template:
@@ -51,3 +58,4 @@
     name: "{{ app_name }}"
     state: restarted
     enabled: yes
+
