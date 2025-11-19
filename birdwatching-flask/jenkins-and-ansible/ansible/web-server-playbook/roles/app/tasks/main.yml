@@ -30,8 +30,6 @@
 - name: Install Python dependencies in venv
   pip:
     requirements: "{{ app_dir }}/requirements.txt"
-    virtualenv: "{{ app_dir }}/venv"
-    virtualenv_python: python3
     executable: "{{ app_dir }}/venv/bin/pip"
 
 - name: Render environment file
