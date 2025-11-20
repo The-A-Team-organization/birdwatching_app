@@ -22,12 +22,12 @@
         src: "/tmp/consul.zip"
         dest: "/usr/local/bin/"
         remote_src: yes
-        mode: '0755'
+        mode: "0755"
 
     - name: Ensure /usr/local/bin/consul is executable
       file:
         path: "/usr/local/bin/consul"
-        mode: '0755'
+        mode: "0755"
         state: file
 
     - name: Create directories for Consul
@@ -168,4 +168,3 @@
         name: systemd-resolved
         state: restarted
         enabled: yes
-

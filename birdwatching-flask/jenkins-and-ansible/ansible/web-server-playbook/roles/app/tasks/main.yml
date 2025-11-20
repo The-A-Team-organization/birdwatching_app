@@ -54,4 +54,3 @@
 - name: Install Python dependencies in venv
   become: yes
   command: "{{ app_dir }}/venv/bin/pip install -r {{ app_dir }}/requirements.txt"
-
