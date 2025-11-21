@@ -9,6 +9,8 @@ WorkingDirectory=/var/snap/amazon-ssm-agent/11797/myappdir
 EnvironmentFile=/etc/birdwatching.env
 ExecStart=/var/snap/amazon-ssm-agent/11797/myappdir/venv/bin/gunicorn -b 127.0.0.1:8000 main:app
 Restart=always
+StandardOutput=append:/var/log/birdwatching/app.log
+StandardError=append:/var/log/birdwatching/app.log
 
 [Install]
 WantedBy=multi-user.target

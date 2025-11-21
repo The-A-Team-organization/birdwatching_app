@@ -64,6 +64,16 @@
     group: root
     mode: "0644"
 
+- name: Ensure log directory exists
+  become: yes
+  file:
+    path: /var/log/birdwatching
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+
 - name: Deploy gunicorn systemd service
   become: yes
   template:
