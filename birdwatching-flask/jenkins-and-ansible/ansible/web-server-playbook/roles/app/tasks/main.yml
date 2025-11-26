@@ -73,7 +73,6 @@
     group: root
     mode: "0755"
 
-
 - name: Deploy gunicorn systemd service
   become: yes
   template:
