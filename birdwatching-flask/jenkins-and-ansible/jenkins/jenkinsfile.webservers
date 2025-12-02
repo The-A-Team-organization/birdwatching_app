@@ -6,7 +6,7 @@ pipeline {
     }
 
     environment {
-        AWS_REGION = "eu-central-1"
+        AWS_REGION = "us-east-1"
         ANSIBLE_PLAYBOOK = "${WORKSPACE}/birdwatching-flask/jenkins-and-ansible/ansible/web-server-playbook/playbook-nginx-rp-with-flask-configure.yaml"
         ANSIBLE_INVENTORY = "/var/lib/jenkins/inventories/${params.ENV}.ini"
     }
@@ -46,15 +46,6 @@ pipeline {
                         env.APP_NAME    = APP_NAME_VAL
                     }
                 }
-            }
-        }
-
-
-        stage('Checkout') {
-            steps {
-                git url: 'https://github.com/The-A-Team-organization/birdwatching_app.git',
-                    branch: 'main'
-                sh "ls -lart ${WORKSPACE}"
             }
         }
 
