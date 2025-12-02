@@ -9,13 +9,6 @@ pipeline {
         ANSIBLE_INVENTORY = "/var/lib/jenkins/inventories/${params.ENV}.ini"
     }
     stages {
-        stage('Checkout') {
-            steps {
-                git url: 'https://github.com/The-A-Team-organization/birdwatching_app.git',
-                    branch: 'main'
-                sh "ls -lart ${WORKSPACE}"
-            }
-        }
         stage('Set AWS Role') {
             steps {
                 script {
