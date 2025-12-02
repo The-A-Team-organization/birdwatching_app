@@ -52,6 +52,7 @@ pipeline {
 
                             echo "=== DEBUG: Can we access the S3 bucket? ==="
                             aws s3 ls s3://ansible-ssm-bucket-oleg || tr    ue
+                            aws s3api list-buckets --query "Buckets[].Name"
 
                             ansible-playbook \
                               -i ${env.ANSIBLE_INVENTORY} \
