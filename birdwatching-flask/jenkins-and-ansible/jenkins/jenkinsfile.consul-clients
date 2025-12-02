@@ -4,7 +4,7 @@ pipeline {
         choice(name: 'ENV', choices: ['dev', 'stage', 'prod'], description: 'Select environment')
     }
     environment {
-        AWS_REGION = "eu-central-1"
+        AWS_REGION = "us-east-1"
         ANSIBLE_PLAYBOOK = "${WORKSPACE}/birdwatching-flask/jenkins-and-ansible/ansible/consul-playbook/consul-client.yaml"
         ANSIBLE_INVENTORY = "/var/lib/jenkins/inventories/${params.ENV}.ini"
     }
